@@ -5,3 +5,6 @@ check
 gen
 testsuite
 res*.out
+ans.cpp
+check.cpp
+gen.cpp

@@ -4,7 +4,7 @@ This is a simple stress testing application.
 
 It compare the solutions in ans.cpp and check.cpp and report the running time.
 
-It also reports errors e.g. TLE/RTE. MLE or other errors are not supported.
+It also reports errors e.g. TLE/RTE/MLE.
 
 Requires C++17 (for `<filesystem>`),`boost::process`.
 
