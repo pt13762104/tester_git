@@ -157,6 +157,7 @@ void test(int testcase)
     std::pair<int, int> c1 = compile_generator();
     std::pair<int, int> c2 = compile_ans();
     std::pair<int, int> c3 = compile_check();
+    int AC = 0;
     if (c1.first || c2.first || c3.first)
     {
         cout << "CE" << std::endl;
@@ -207,7 +208,10 @@ void test(int testcase)
             {
                 cout << "Status: ";
                 if (compareFiles("base.out", "test.out"))
+                {
                     cout << "AC" << std::endl;
+                    AC++;
+                }
                 else
                 {
                     cout << "WA" << std::endl;
@@ -224,6 +228,7 @@ void test(int testcase)
     std::filesystem::remove("ans");
     std::filesystem::remove("check");
     std::filesystem::remove("gen");
+    cout << "AC: " << AC << "/" << testcase << " tests." << std::endl;
 }
 int main(int argc, char **argv)
 {
