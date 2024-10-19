@@ -8,3 +8,6 @@ res*.out
 ans.cpp
 check.cpp
 gen.cpp
+base.out
+test.out
+test.inp

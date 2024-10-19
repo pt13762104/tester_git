@@ -171,6 +171,9 @@ void test(int testcase)
     }
     for (int i = 0; i < testcase; i++)
     {
+        std::filesystem::remove("test.inp");
+        std::filesystem::remove("test.out");
+        std::filesystem::remove("base.out");
         cout << "Test #" << i << ":" << std::endl;
         status a1 = generate(i);
         cout << "Generator: ";
@@ -221,10 +224,10 @@ void test(int testcase)
                 }
             }
         }
-        std::filesystem::remove("test.inp");
-        std::filesystem::remove("test.out");
-        std::filesystem::remove("base.out");
     }
+    std::filesystem::remove("test.inp");
+    std::filesystem::remove("test.out");
+    std::filesystem::remove("base.out");
     std::filesystem::remove("ans");
     std::filesystem::remove("check");
     std::filesystem::remove("gen");
