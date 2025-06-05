@@ -231,7 +231,10 @@ void test(int testcase)
                 status a_c = checker();
                 cout << "Checker: ";
                 if (a_c.status == 0)
+                {
                     cout << "AC [" << a_c.time << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                    AC++;
+                }
                 else if (a_c.status == 1)
                     cout << "TLE [>" << wt << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
                 else if (a_c.status == 2)
