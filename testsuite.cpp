@@ -29,28 +29,10 @@ int process_mem_usage(int id)
     int page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
     return rss * page_size_kb;
 }
-bool compareFiles(const std::string &p1, const std::string &p2)
-{
-    std::ifstream f1(p1, std::ifstream::binary | std::ifstream::ate);
-    std::ifstream f2(p2, std::ifstream::binary | std::ifstream::ate);
-    if (f1.fail() || f2.fail())
-    {
-        return false;
-    }
-    if (f1.tellg() != f2.tellg())
-    {
-        return false;
-    }
-    f1.seekg(0, std::ifstream::beg);
-    f2.seekg(0, std::ifstream::beg);
-    return std::equal(std::istreambuf_iterator<char>(f1.rdbuf()),
-                      std::istreambuf_iterator<char>(),
-                      std::istreambuf_iterator<char>(f2.rdbuf()));
-}
 std::pair<int, int> compile_generator()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ gen.cpp -o gen");
+    boost::process::child x("g++ -O2 -march=native gen.cpp -o gen");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -115,6 +97,40 @@ status ans()
     z.wait();
     return s;
 }
+std::pair<int, int> compile_checker()
+{
+    std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
+    boost::process::child x("g++ -O2 -march=native checker.cpp -o checker");
+    x.wait();
+    std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
+    int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
+    return {x.exit_code(), c_time};
+}
+status checker()
+{
+    boost::process::child z("./checker", boost::process::std_out > "checker.out");
+    auto t1 = Clock.now(), t2 = Clock.now();
+    int x = 0;
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() <= wt && z.running() && x <= ml)
+    {
+        t2 = Clock.now();
+        x = std::max(x, process_mem_usage(z.id()));
+    }
+    int t = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    status s{0, t, x};
+    if (z.running())
+    {
+        z.terminate();
+        if (t > wt)
+            s.status = 1;
+        else
+            s.status = 2;
+    }
+    else if (z.exit_code())
+        s.status = 3;
+    z.wait();
+    return s;
+}
 std::pair<int, int> compile_check()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
@@ -157,8 +173,9 @@ void test(int testcase)
     std::pair<int, int> c1 = compile_generator();
     std::pair<int, int> c2 = compile_ans();
     std::pair<int, int> c3 = compile_check();
+    std::pair<int, int> c4 = compile_checker();
     int AC = 0;
-    if (c1.first || c2.first || c3.first)
+    if (c1.first || c2.first || c3.first || c4.first)
     {
         cout << "CE" << std::endl;
         return;
@@ -168,12 +185,14 @@ void test(int testcase)
         cout << "Compilling generator took " << c1.second << "ms." << std::endl;
         cout << "Compilling ans took " << c2.second << "ms." << std::endl;
         cout << "Compilling check took " << c3.second << "ms." << std::endl;
+        cout << "Compilling checker took " << c4.second << "ms." << std::endl;
     }
     for (int i = 0; i < testcase; i++)
     {
         std::filesystem::remove("test.inp");
         std::filesystem::remove("test.out");
         std::filesystem::remove("base.out");
+        std::filesystem::remove("checker.out");
         cout << "Test #" << i << ":" << std::endl;
         status a1 = generate(i);
         cout << "Generator: ";
@@ -209,27 +228,31 @@ void test(int testcase)
                 cout << "RTE [" << a_t.time << " ms, " << a_t.memory / 1000.0 << " MB]" << std::endl;
             if (a_a.status == 0 && a_t.status == 0)
             {
-                cout << "Status: ";
-                if (compareFiles("base.out", "test.out"))
-                {
-                    cout << "AC" << std::endl;
-                    AC++;
-                }
+                status a_c = checker();
+                cout << "Checker: ";
+                if (a_c.status == 0)
+                    cout << "AC [" << a_c.time << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                else if (a_c.status == 1)
+                    cout << "TLE [>" << wt << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                else if (a_c.status == 2)
+                    cout << "MLE [" << a_c.time << " ms, >" << ml / 1000.0 << " MB]" << std::endl;
                 else
-                {
-                    cout << "WA" << std::endl;
-                    std::filesystem::copy("test.inp", "wa_tests/test_wa_" + std::to_string(i) + ".inp");
-                    std::filesystem::copy("base.out", "wa_tests/base_wa_" + std::to_string(i) + ".out");
-                    std::filesystem::copy("test.out", "wa_tests/test_wa_" + std::to_string(i) + ".out");
-                }
+                    // Assume non-zero for WA
+                    cout << "WA [" << a_c.time << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                std::ifstream ckout("checker.out");
+                if (ckout && ckout.peek() != std::ifstream::traits_type::eof())
+                    cout << "Checker log:\n"
+                         << ckout.rdbuf();
             }
         }
     }
     std::filesystem::remove("test.inp");
     std::filesystem::remove("test.out");
     std::filesystem::remove("base.out");
+    std::filesystem::remove("checker.out");
     std::filesystem::remove("ans");
     std::filesystem::remove("check");
+    std::filesystem::remove("checker");
     std::filesystem::remove("gen");
     cout << "AC: " << AC << "/" << testcase << " tests." << std::endl;
 }
