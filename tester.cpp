@@ -5,7 +5,7 @@
 #include <filesystem>
 int wt = 1000;
 long long ml = 256000000;
-#define res "1"
+std::string result_file = "result.out";
 struct status
 {
     // 0=OK, 1=TLE, 2=MLE, 3=RTE
@@ -134,7 +134,7 @@ status checker()
 std::pair<int, int> compile_check()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ -O2 -march=native -mcmodel=large  check.cpp -o check");
+    boost::process::child x("g++ -O2 -march=native -mcmodel=large check.cpp -o check");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -167,7 +167,7 @@ status check()
 }
 void test(int testcase)
 {
-    std::ofstream cout("res" res ".out");
+    std::ofstream cout(result_file);
     std::filesystem::remove_all("wa_tests");
     std::filesystem::create_directories("wa_tests");
     std::pair<int, int> c1 = compile_generator();
@@ -270,7 +270,11 @@ int main(int argc, char **argv)
             wt = std::stoi(argv[2]);
             if (argv[3] != NULL)
             {
-                ml = std::stoi(argv[3]) * 1000000.0;
+                ml = std::stoi(argv[3]) * 1000000;
+                if (argv[4] != NULL)
+                {
+                    result_file = argv[4];
+                }
             }
         }
     }
