@@ -2,11 +2,13 @@ wa_tests
 .vscode
 ans
 check
+checker
 gen
-testsuite
-res*.out
+tester
+result.out
 ans.cpp
 check.cpp
+checker.cpp
 gen.cpp
 base.out
 test.out
