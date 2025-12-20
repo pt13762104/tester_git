@@ -10,10 +10,9 @@ Requires C++17 (for `<filesystem>`),`boost::process`.
 
 INSTALLATION:
 
-Run `g++ (or other compiler) testsuite.cpp -o testsuite`.
+Run `g++ (or other compiler) tester.cpp -o tester`.
 
 USAGE:
 
-If you want to change the time limit, change the line `const int wt = 1000` to other limits (2000 is 2s, etc...). Then recompile. Same for the memory limit (change the line `const int ml = 1048576` to other limits (500000 is 500MB, etc...)).
+The program accepts three arguments: `./tester nt wt ml`, with `nt` being the number of tests, `wt` being the time limit (in ms), `ml` being the memory limit in MB (not MiB!). `ml` only counts the resident set size, so programs can allocate a lot of memory but if they're mostly unused pages, the reported memory usage can be small. `nt` defaults to 100, `wt` defaults to 1000 and `ml` defaults to 256 (can be changed in the code).
 
-Run `./testsuite` to run 100 tests by default. If you want to change the number of tests, run `./testsuite x`, with x being the number of tests.

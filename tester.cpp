@@ -3,8 +3,8 @@
 #include <thread>
 #include <boost/process.hpp>
 #include <filesystem>
-const int wt = 1000;
-const int ml = 1048576;
+int wt = 1000;
+long long ml = 256000000;
 #define res "1"
 struct status
 {
@@ -13,26 +13,26 @@ struct status
     // in ms
     int time;
     // in kB
-    int memory;
+    long long memory;
 };
 std::chrono::high_resolution_clock Clock;
-int process_mem_usage(int id)
+const int page_size = sysconf(_SC_PAGE_SIZE);
+long long process_mem_usage(int id)
 {
     std::ifstream stat_stream("/proc/" + std::to_string(id) + "/stat", std::ios_base::in);
     std::string pid, comm, state, ppid, pgrp, session, tty_nr;
     std::string tpgid, flags, minflt, cminflt, majflt, cmajflt;
     std::string utime, stime, cutime, cstime, priority, nice;
     std::string O, itrealvalue, starttime, vsize;
-    int rss;
+    long long rss;
     stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt >> utime >> stime >> cutime >> cstime >> priority >> nice >> O >> itrealvalue >> starttime >> vsize >> rss;
     stat_stream.close();
-    int page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
-    return rss * page_size_kb;
+    return page_size * rss;
 }
 std::pair<int, int> compile_generator()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ -O2 -march=native gen.cpp -o gen");
+    boost::process::child x("g++ -O2 -march=native -mcmodel=large gen.cpp -o gen");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -42,7 +42,7 @@ status generate(int i)
 {
     boost::process::child z("./gen " + std::to_string(i), boost::process::std_out > "test.inp");
     auto t1 = Clock.now(), t2 = Clock.now();
-    int x = 0;
+    long long x = 0;
     while (std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() <= wt && z.running() && x <= ml)
     {
         t2 = Clock.now();
@@ -66,7 +66,7 @@ status generate(int i)
 std::pair<int, int> compile_ans()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ -O2 -march=native ans.cpp -o ans");
+    boost::process::child x("g++ -O2 -march=native -mcmodel=large ans.cpp -o ans");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -76,7 +76,7 @@ status ans()
 {
     boost::process::child z("./ans", boost::process::std_in < "test.inp", boost::process::std_out > "base.out");
     auto t1 = Clock.now(), t2 = Clock.now();
-    int x = 0;
+    long long x = 0;
     while (std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() <= wt && z.running() && x <= ml)
     {
         t2 = Clock.now();
@@ -100,7 +100,7 @@ status ans()
 std::pair<int, int> compile_checker()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ -O2 -march=native checker.cpp -o checker");
+    boost::process::child x("g++ -O2 -march=native -mcmodel=large checker.cpp -o checker");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -110,7 +110,7 @@ status checker()
 {
     boost::process::child z("./checker", boost::process::std_out > "checker.out");
     auto t1 = Clock.now(), t2 = Clock.now();
-    int x = 0;
+    long long x = 0;
     while (std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() <= wt && z.running() && x <= ml)
     {
         t2 = Clock.now();
@@ -134,7 +134,7 @@ status checker()
 std::pair<int, int> compile_check()
 {
     std::chrono::steady_clock::time_point startc = std::chrono::steady_clock::now();
-    boost::process::child x("g++ -O2 -march=native check.cpp -o check");
+    boost::process::child x("g++ -O2 -march=native -mcmodel=large  check.cpp -o check");
     x.wait();
     std::chrono::steady_clock::time_point endc = std::chrono::steady_clock::now();
     int c_time = std::chrono::duration_cast<std::chrono::milliseconds>(endc - startc).count();
@@ -144,7 +144,7 @@ status check()
 {
     boost::process::child z("./check", boost::process::std_in < "test.inp", boost::process::std_out > "test.out");
     auto t1 = Clock.now(), t2 = Clock.now();
-    int x = 0;
+    long long x = 0;
     while (std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() <= wt && z.running() && x <= ml)
     {
         t2 = Clock.now();
@@ -197,51 +197,51 @@ void test(int testcase)
         status a1 = generate(i);
         cout << "Generator: ";
         if (a1.status == 0)
-            cout << "OK [" << a1.time << " ms, " << a1.memory / 1000.0 << " MB]" << std::endl;
+            cout << "OK [" << a1.time << " ms, " << a1.memory / 1000000.0 << " MB]" << std::endl;
         else if (a1.status == 1)
-            cout << "TLE [>" << wt << " ms, " << a1.memory / 1000.0 << " MB]" << std::endl;
+            cout << "TLE [>" << wt << " ms, " << a1.memory / 1000000.0 << " MB]" << std::endl;
         else if (a1.status == 2)
-            cout << "MLE [" << a1.time << " ms, >" << ml / 1000.0 << " MB]" << std::endl;
+            cout << "MLE [" << a1.time << " ms, >" << ml / 1000000.0 << " MB]" << std::endl;
         else
-            cout << "RTE [" << a1.time << " ms, " << a1.memory / 1000.0 << " MB]" << std::endl;
+            cout << "RTE [" << a1.time << " ms, " << a1.memory / 1000000.0 << " MB]" << std::endl;
         if (a1.status == 0)
         {
             status a_a = ans();
             status a_t = check();
             cout << "Base: ";
             if (a_a.status == 0)
-                cout << "OK [" << a_a.time << " ms, " << a_a.memory / 1000.0 << " MB]" << std::endl;
+                cout << "OK [" << a_a.time << " ms, " << a_a.memory / 1000000.0 << " MB]" << std::endl;
             else if (a_a.status == 1)
-                cout << "TLE [>" << wt << " ms, " << a_a.memory / 1000.0 << " MB]" << std::endl;
+                cout << "TLE [>" << wt << " ms, " << a_a.memory / 1000000.0 << " MB]" << std::endl;
             else if (a_a.status == 2)
-                cout << "MLE [" << a_a.time << " ms, >" << ml / 1000.0 << " MB]" << std::endl;
+                cout << "MLE [" << a_a.time << " ms, >" << ml / 1000000.0 << " MB]" << std::endl;
             else
-                cout << "RTE [" << a_a.time << " ms, " << a_a.memory / 1000.0 << " MB]" << std::endl;
+                cout << "RTE [" << a_a.time << " ms, " << a_a.memory / 1000000.0 << " MB]" << std::endl;
             cout << "Test: ";
             if (a_t.status == 0)
-                cout << "OK [" << a_t.time << " ms, " << a_t.memory / 1000.0 << " MB]" << std::endl;
+                cout << "OK [" << a_t.time << " ms, " << a_t.memory / 1000000.0 << " MB]" << std::endl;
             else if (a_t.status == 1)
-                cout << "TLE [>" << wt << " ms, " << a_t.memory / 1000.0 << " MB]" << std::endl;
+                cout << "TLE [>" << wt << " ms, " << a_t.memory / 1000000.0 << " MB]" << std::endl;
             else if (a_t.status == 2)
-                cout << "MLE [" << a_t.time << " ms, >" << ml / 1000.0 << " MB]" << std::endl;
+                cout << "MLE [" << a_t.time << " ms, >" << ml / 1000000.0 << " MB]" << std::endl;
             else
-                cout << "RTE [" << a_t.time << " ms, " << a_t.memory / 1000.0 << " MB]" << std::endl;
+                cout << "RTE [" << a_t.time << " ms, " << a_t.memory / 1000000.0 << " MB]" << std::endl;
             if (a_a.status == 0 && a_t.status == 0)
             {
                 status a_c = checker();
                 cout << "Checker: ";
                 if (a_c.status == 0)
                 {
-                    cout << "AC [" << a_c.time << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                    cout << "AC [" << a_c.time << " ms, " << a_c.memory / 1000000.0 << " MB]" << std::endl;
                     AC++;
                 }
                 else if (a_c.status == 1)
-                    cout << "TLE [>" << wt << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                    cout << "TLE [>" << wt << " ms, " << a_c.memory / 1000000.0 << " MB]" << std::endl;
                 else if (a_c.status == 2)
-                    cout << "MLE [" << a_c.time << " ms, >" << ml / 1000.0 << " MB]" << std::endl;
+                    cout << "MLE [" << a_c.time << " ms, >" << ml / 1000000.0 << " MB]" << std::endl;
                 else
                     // Assume non-zero for WA
-                    cout << "WA [" << a_c.time << " ms, " << a_c.memory / 1000.0 << " MB]" << std::endl;
+                    cout << "WA [" << a_c.time << " ms, " << a_c.memory / 1000000.0 << " MB]" << std::endl;
                 std::ifstream ckout("checker.out");
                 if (ckout && ckout.peek() != std::ifstream::traits_type::eof())
                     cout << "Checker log:\n"
@@ -261,12 +261,18 @@ void test(int testcase)
 }
 int main(int argc, char **argv)
 {
-    if (argv[1] == NULL)
+    int nt = 100;
+    if (argv[1] != NULL)
     {
-        test(100);
+        nt = std::stoi(argv[1]);
+        if (argv[2] != NULL)
+        {
+            wt = std::stoi(argv[2]);
+            if (argv[3] != NULL)
+            {
+                ml = std::stoi(argv[3]) * 1000000.0;
+            }
+        }
     }
-    else
-    {
-        test(std::stoi(argv[1]));
-    }
+    test(nt);
 }
