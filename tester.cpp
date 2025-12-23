@@ -240,8 +240,13 @@ void test(int testcase)
                 else if (a_c.status == 2)
                     cout << "MLE [" << a_c.time << " ms, >" << ml / 1000000.0 << " MB]" << std::endl;
                 else
+                {
                     // Assume non-zero for WA
                     cout << "WA [" << a_c.time << " ms, " << a_c.memory / 1000000.0 << " MB]" << std::endl;
+                    std::filesystem::copy("test.inp", "wa_tests/test_wa_" + std::to_string(i) + ".inp");
+                    std::filesystem::copy("base.out", "wa_tests/base_wa_" + std::to_string(i) + ".out");
+                    std::filesystem::copy("test.out", "wa_tests/test_wa_" + std::to_string(i) + ".out");
+                }
                 std::ifstream ckout("checker.out");
                 if (ckout && ckout.peek() != std::ifstream::traits_type::eof())
                     cout << "Checker log:\n"
